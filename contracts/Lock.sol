@@ -10,9 +10,22 @@ contract Msg {
 
     Message[] public messages;
 
+    mapping(string => bool) public registeredDevices;
+
+    event DeviceRegistered(string deviceId);
     event MessageLogged(string deviceId, string content, uint256 timestamp);
 
+    // Register a new device (can be extended to include access control)
+    function registerDevice(string memory _deviceId) public {
+        require(!registeredDevices[_deviceId], "Device already registered");
+        registeredDevices[_deviceId] = true;
+        emit DeviceRegistered(_deviceId);
+    }
+
+    // Log message only if device is registered
     function logMessage(string memory _deviceId, string memory _content) public {
+        require(registeredDevices[_deviceId], "Device not registered");
+
         Message memory newMsg = Message({
             deviceId: _deviceId,
             content: _content,

@@ -47,4 +47,4 @@ def log_message():
 if __name__ == '__main__':
     print("Starting server...")
     print("Chain active:", is_chain_active())
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
