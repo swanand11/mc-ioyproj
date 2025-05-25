@@ -65,7 +65,10 @@ void loop() {
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
 
-    String payload = "{\"device_id\":\"esp32_sender\",\"message\":\"" + message + "\"}";
+    String payload = "{\"device_id\":\"esp32_sender\","
+                 "\"receiver_id\":\"esp32_receiver\","
+                 "\"message\":\"" + message + "\"}";
+
     int httpResponseCode = http.POST(payload);
 
     if (httpResponseCode > 0) {
