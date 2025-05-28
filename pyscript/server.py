@@ -51,6 +51,30 @@ def log_message():
         "status": "Message logged on blockchain",
         "txHash": receipt.transactionHash.hex()
     })
+@app.route("/auth", methods=["POST"])
+def auth_device():
+    if not is_chain_active():
+        return "no", 503
+
+    data = request.get_json()
+    device_id = data.get("device_id")
+
+    print(f"Auth request for device: {device_id}")
+
+    # Check if device is registered
+    try:
+        is_registered = contract.functions.registeredDevices(device_id).call()
+    except Exception as e:
+        print(f"Error checking registration: {e}")
+        return "no", 500
+
+    if is_registered:
+        print(f"Device '{device_id}' is authenticated.")
+        return "yes"
+    else:
+        print(f"Device '{device_id}' is NOT authenticated.")
+        return "no"
+
 
 if __name__ == "__main__":
     print("Starting Flask server on port 5000...")

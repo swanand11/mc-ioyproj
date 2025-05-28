@@ -1,22 +1,22 @@
 #include <SPI.h>
 #include <LoRa.h>
 #include <Wire.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include "keys.h"
 #include <LiquidCrystal_I2C.h>
 
-// Change the I2C address if needed (e.g., try 0x3F or 0x26 if 0x27 doesn't work)
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
+String senderDevice = "esp32_sender";  
+
 
 void setup() {
   Serial.begin(9600);
-
-  // Initialize I2C for ESP32 (GPIO21 = SDA, GPIO22 = SCL)
   Wire.begin(21, 22);
-
-  lcd.init();          // Use init() instead of begin() for most LiquidCrystal_I2C libraries
+  lcd.init();
   lcd.backlight();
   lcd.clear();
 
-  // Initialize LoRa (setPins: NSS/CS, RST, DIO0)
   LoRa.setPins(5, 15, 2);  
   if (!LoRa.begin(433E6)) {
     Serial.println("LoRa init failed!");
@@ -24,8 +24,35 @@ void setup() {
     while (1);
   }
 
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi connected");
+  lcd.clear();
+  lcd.print("WiFi Connected");
   Serial.println("LoRa Ready - Receiver");
-  lcd.print("Waiting for msg");
+  lcd.setCursor(0, 1);
+  lcd.print("Waiting...");
+}
+
+bool isAuthenticated(String deviceId) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
+  
+  String payload = "{\"device_id\":\"" + deviceId + "\"}";
+  int httpCode = http.POST(payload);
+
+  String response = http.getString();
+  http.end();
+
+  Serial.println("Auth status: " + response);
+  return (httpCode == 200 && response == "yes");
 }
 
 void loop() {
@@ -36,13 +63,22 @@ void loop() {
       received += (char)LoRa.read();
     }
 
-    Serial.print("Received: ");
+    Serial.print("Received LoRa: ");
     Serial.println(received);
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Received:");
-    lcd.setCursor(0, 1);
-    lcd.print(received);
+    // Check auth
+    if (isAuthenticated(senderDevice)) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("From Auth Dev:");
+      lcd.setCursor(0, 1);
+      lcd.print(received);
+    } else {
+      Serial.println("Sender not authenticated. Ignoring message.");
+      lcd.clear();
+      lcd.print("Untrusted Device");
+    }
   }
+
+  delay(100);  // Small delay for stability
 }
